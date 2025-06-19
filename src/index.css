@@ -1,0 +1,106 @@
+/* Reset dan dasar */
+body {
+  margin: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #121212; /* Spotify dark background */
+  color: #ffffff; /* Default text white */
+  transition: all 0.3s ease-in-out;
+}
+
+h1, h2, h3, h4, h5 {
+  color: #ffffff;
+}
+
+/* Warna Spotify hijau */
+:root {
+  --spotify-green: #1db954;
+  --spotify-dark: #121212;
+  --spotify-gray: #b3b3b3;
+}
+
+/* Button khusus */
+.btn-spotify {
+  background-color: var(--spotify-green);
+  color: #fff;
+  border: none;
+}
+
+.btn-spotify:hover {
+  background-color: #1ed760;
+  color: #000;
+}
+
+/* Deteksi mood info alert */
+.alert-info {
+  background-color: #1e1e1e;
+  color: var(--spotify-green);
+  border: 1px solid var(--spotify-green);
+}
+
+/* Tombol kamera */
+.btn-success {
+  background-color: var(--spotify-green);
+  border: none;
+}
+
+.btn-danger {
+  background-color: #ff4b4b;
+  border: none;
+}
+
+.btn-success:hover {
+  background-color: #1ed760;
+}
+
+.btn-danger:hover {
+  background-color: #ff6b6b;
+}
+
+/* Spinner warna hijau */
+.spinner-border {
+  color: var(--spotify-green);
+}
+
+/* Footer dan Header */
+footer {
+  background-color: #181818;
+  color: var(--spotify-gray);
+}
+
+header {
+  background-color: #000000;
+}
+
+/* Responsive canvas webcam */
+canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 2px solid #282828;
+}
+
+/* Horizontal line */
+hr {
+  border-top: 1px solid #282828;
+}
+
+/* Link styling */
+a {
+  color: var(--spotify-green);
+  text-decoration: none;
+}
+a:hover {
+  color: #1ed760;
+  text-decoration: underline;
+}
+
+/* Social icons default color + hover */
+.social-icon {
+  color: var(--spotify-gray);
+  transition: color 0.3s ease;
+}
+
+.social-icon:hover {
+  color: var(--spotify-green); /* 🟢 Spotify green saat hover */
+}
+
