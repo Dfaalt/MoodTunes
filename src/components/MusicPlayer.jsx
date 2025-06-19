@@ -74,6 +74,18 @@ const MusicPlayer = ({ mood, isSearch = false }) => {
             style={{ borderRadius: "12px" }}
           ></iframe>
         </div>
+        {/* Tambahan tombol untuk versi mobile */}
+        <div className="mt-3">
+          <a
+            href={`https://open.spotify.com/playlist/${playlist.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-success btn-lg d-inline-flex align-items-center gap-2 px-4 py-2 fw-bold"
+            style={{ borderRadius: "50px" }}
+          >
+            <i className="bi bi-spotify fs-5"></i> Buka di Spotify
+          </a>
+        </div>
       </div>
     </div>
   );
