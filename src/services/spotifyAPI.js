@@ -1,113 +1,115 @@
-// src/services/spotifyAPI.js
-import axios from "axios"; // 🚀 Library HTTP untuk request ke Spotify API
+// URL function Supabase
+const URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
+const MARKET = "ID"; // wilayah Indonesia
 
-// 🔐 Ambil client ID & secret dari environment (file .env)
-const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
-const CLIENT_SECRET = import.meta.env.VITE_SPOTIFY_CLIENT_SECRET;
+// Filter sederhana (hindari playlist tidak relevan)
+const BLACKLIST = ["birthday", "ultah", "ulang tahun", "kids", "children"];
 
-let accessToken = ""; // 💾 Menyimpan token akses setelah login
+// Skor sederhana untuk memilih playlist terbaik
+function score(p) {
+  const name = (p?.name || "").toLowerCase();
+  const desc = (p?.description || "").toLowerCase();
+  const ownerId = (p?.owner?.id || "").toLowerCase();
 
-// 🔐 Fungsi untuk mendapatkan access token dari Spotify menggunakan Client Credentials Flow
-export const getSpotifyAccessToken = async () => {
-  const params = new URLSearchParams();
-  params.append("grant_type", "client_credentials"); // ⚙️ Jenis autentikasi
-
-  const headers = {
-    "Content-Type": "application/x-www-form-urlencoded",
-    Authorization: "Basic " + btoa(`${CLIENT_ID}:${CLIENT_SECRET}`), // 🔑 Encode ke base64
-  };
-
-  try {
-    const response = await axios.post(
-      "https://accounts.spotify.com/api/token", // 🎯 Endpoint untuk mendapatkan token
-      params,
-      { headers }
-    );
-
-    accessToken = response.data.access_token; // ✅ Simpan token
-    return accessToken;
-  } catch (error) {
-    console.error(
-      "❌ Error getting Spotify token:",
-      error.response?.data || error.message
-    );
-    return null; // ❗ Return null kalau gagal
+  // singkirkan blacklist
+  if ([name, desc].some((txt) => BLACKLIST.some((b) => txt.includes(b)))) {
+    return -999;
   }
-};
 
-// 🎵 Fungsi untuk mendapatkan playlist berdasarkan keyword mood (misal: "happy", "sad", "angry")
-export const getPlaylistByMood = async (mood) => {
+  let s = 0;
+  if (ownerId === "spotify") s += 3; // prioritas playlist resmi Spotify
+  if (p?.images?.length) s += 1; // ada cover image
+  return s;
+}
+
+// Hilangkan duplikat kandidat query
+const unique = (arr) => [...new Set(arr)];
+
+// Kirim POST ke Edge Function + parse JSON (ringkas)
+async function post(body) {
+  const res = await fetch(URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  return data;
+}
+
+//  1) Playlist berdasarkan mood
+export async function getPlaylistByMood(moodRaw) {
+  const mood = (moodRaw || "").trim().toLowerCase();
+  if (!mood) return null;
+
+  // kandidat query (sederhana + tambahan per-mood)
+  const candidates = unique([
+    mood,
+    `${mood} playlist`,
+    `${mood} vibes`,
+    `${mood} songs`,
+    ...(mood === "happy" ? ["mood booster", "feel good", "good vibes"] : []),
+    ...(mood === "sad" ? ["sad songs", "melancholy", "slow chill"] : []),
+    ...(mood === "angry" ? ["rage workout", "hard rock", "pump up"] : []),
+  ]);
+
+  // coba satu per satu kandidat sampai dapat yang paling pas
+  for (const q of candidates) {
+    let data;
+    try {
+      data = await post({
+        action: "search",
+        query: q,
+        limit: 20,
+        market: MARKET,
+      });
+    } catch {
+      continue;
+    }
+
+    const items = data?.playlists?.items || [];
+    if (!items.length) continue;
+
+    // pilih playlist dengan skor tertinggi (hindari birthday, utamakan owner spotify)
+    const best = items.reduce(
+      (a, b) => (score(b) > score(a) ? b : a),
+      items[0]
+    );
+    if (score(best) > -999) return best;
+  }
+
+  // fallback: featured playlists (biar UI tidak kosong)
   try {
-    if (!accessToken) await getSpotifyAccessToken(); // ✅ Pastikan ada token dulu
-
-    const response = await axios.get(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
-        mood
-      )}&type=playlist&limit=1`, // 🔍 Cari playlist berdasarkan keyword mood
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`, // 🪪 Token akses
-        },
-      }
-    );
-
-    const playlist = response.data.playlists.items[0]; // 🎯 Ambil playlist pertama dari hasil pencarian
-    return playlist || null; // 🔙 Return playlist atau null jika tidak ada
-  } catch (error) {
-    console.error(
-      "❌ Error fetching playlist:",
-      error.response?.data || error.message
-    );
+    const feat = await post({
+      action: "featured-playlists",
+      limit: 20,
+      market: MARKET,
+    });
+    const list = (feat?.playlists?.items || []).filter((p) => score(p) > -999);
+    return list[0] || null;
+  } catch {
     return null;
   }
-};
+}
 
-// 🎶 Fungsi untuk mengambil daftar lagu dari sebuah playlist
-export const getTracksFromPlaylist = async (playlistId) => {
+//  2) Ambil track dari playlist
+export async function getTracksFromPlaylist(playlistId) {
+  if (!playlistId) return [];
   try {
-    if (!accessToken) await getSpotifyAccessToken(); // ✅ Pastikan token siap
-
-    const response = await axios.get(
-      `https://api.spotify.com/v1/playlists/${playlistId}/tracks`, // 🔗 Endpoint untuk daftar lagu di playlist
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    return response.data.items || []; // 🔙 Return daftar track
-  } catch (error) {
-    console.error(
-      "❌ Error fetching tracks:",
-      error.response?.data || error.message
-    );
-    return []; // 🔙 Return array kosong kalau error
+    const data = await post({
+      action: "playlist",
+      query: playlistId,
+      market: MARKET,
+    });
+    return data?.tracks?.items || [];
+  } catch {
+    return [];
   }
-};
+}
 
-// 🆕 🔍 Fungsi pencarian umum (playlist dan track)
-export const searchSpotify = async (query) => {
-  try {
-    if (!accessToken) await getSpotifyAccessToken(); // ✅ Pastikan token siap
-
-    const response = await axios.get(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
-        query
-      )}&type=playlist,track&limit=5`, // 🔍 Cari playlist dan track
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    return response.data; // 🔙 Return semua hasil
-  } catch (error) {
-    console.error(
-      "❌ Error searching Spotify:",
-      error.response?.data || error.message
-    );
-    return null;
-  }
-};
+//  3) Pencarian umum (struktur penuh)
+export async function searchSpotify(query, limit = 10) {
+  const q = (query || "").trim();
+  if (!q) return { tracks: {}, artists: {}, albums: {}, playlists: {} };
+  return post({ action: "search", query: q, limit, market: MARKET });
+}
