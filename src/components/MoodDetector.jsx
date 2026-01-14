@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import * as tmImage from "@teachablemachine/image"; // ⬅️ Import library Teachable Machine untuk image classification
+import * as tmImage from "@teachablemachine/image"; // Import library Teachable Machine untuk image classification
 
 // Komponen utama: menerima props `onMoodChange` untuk mengirim mood ke parent
 const MoodDetector = ({ onMoodChange }) => {
@@ -129,7 +129,7 @@ const MoodDetector = ({ onMoodChange }) => {
       cooldownMap.current[newMood] = now + COOLDOWN_DURATION;
       startCooldownCountdown(now + COOLDOWN_DURATION);
 
-      stopCamera(); // 🔥 Kamera otomatis mati setelah mendeteksi mood
+      stopCamera(); //  Kamera otomatis mati setelah mendeteksi mood
     } else {
       setConfidence(confidenceValue); // jika mood sama, hanya update confidence
     }
@@ -145,7 +145,7 @@ const MoodDetector = ({ onMoodChange }) => {
         <br />
         {cooldownTime > 0 && (
           <span className="text-white">
-            ⏳ Cooldown for Mood: {cooldownTime} detik
+            Cooldown for Mood: {cooldownTime} detik
           </span>
         )}
       </div>
